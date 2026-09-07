@@ -1,0 +1,22 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+
+## ABP
+aspnet-core/**/wwwroot/libs/
+aspnet-core/**/node_modules/
+aspnet-core/**/yarn.lock
+
+## IDE
+.vs/
+.idea/
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Logs
+*.log
+Logs/

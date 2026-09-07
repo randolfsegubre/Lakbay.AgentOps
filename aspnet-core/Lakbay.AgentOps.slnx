@@ -1,0 +1,36 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Lakbay.AgentOps.Application.Contracts/Lakbay.AgentOps.Application.Contracts.csproj" />
+    <Project Path="src/Lakbay.AgentOps.Application/Lakbay.AgentOps.Application.csproj" />
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <Project Path="src/Lakbay.AgentOps.DbMigrator/Lakbay.AgentOps.DbMigrator.csproj" />
+    <Project Path="src/Lakbay.AgentOps.Domain.Shared/Lakbay.AgentOps.Domain.Shared.csproj" />
+    <Project Path="src/Lakbay.AgentOps.Domain/Lakbay.AgentOps.Domain.csproj" />
+    <Project Path="src/Lakbay.AgentOps.EntityFrameworkCore/Lakbay.AgentOps.EntityFrameworkCore.csproj" />
+    <Project Path="src/Lakbay.AgentOps.HttpApi.Client/Lakbay.AgentOps.HttpApi.Client.csproj" />
+    
+    <Project Path="src/Lakbay.AgentOps.HttpApi.Host/Lakbay.AgentOps.HttpApi.Host.csproj" />
+    <Project Path="src/Lakbay.AgentOps.HttpApi/Lakbay.AgentOps.HttpApi.csproj" />
+    <Project Path="src/Lakbay.AgentOps.Oracle/Lakbay.AgentOps.Oracle.csproj" />
+    
+    
+    
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Lakbay.AgentOps.Application.Tests/Lakbay.AgentOps.Application.Tests.csproj" />
+    <Project Path="test/Lakbay.AgentOps.Domain.Tests/Lakbay.AgentOps.Domain.Tests.csproj" />
+    <Project Path="test/Lakbay.AgentOps.EntityFrameworkCore.Tests/Lakbay.AgentOps.EntityFrameworkCore.Tests.csproj" />
+    <Project Path="test/Lakbay.AgentOps.HttpApi.Client.ConsoleTestApp/Lakbay.AgentOps.HttpApi.Client.ConsoleTestApp.csproj" />
+    
+    <Project Path="test/Lakbay.AgentOps.TestBase/Lakbay.AgentOps.TestBase.csproj" />
+    
+  </Folder>
+</Solution>
