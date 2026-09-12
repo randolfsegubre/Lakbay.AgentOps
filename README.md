@@ -100,6 +100,26 @@ left in a committed file.
   fails with the correct `ORA-12541: no listener at 127.0.0.1:1521` (Oracle
   not installed yet is the only remaining gap in that path, not a code bug).
 
+## Verified live (2026-09-12) — gRPC confirm-booking restored and re-verified
+
+`POST /api/bookings/confirm` now calls `Lakbay.Booking` over gRPC
+(ADR-0027), not the REST call this doc previously described — that work
+had been silently dropped by an unexplained git history rewrite, recovered
+from local git history, and re-verified live end-to-end with both services
+actually running as separate processes: a real confirm-booking call
+succeeded with a real booking id, and a second call against the same
+now-sold-out slot was correctly rejected. A real, previously-unverified bug
+was found and fixed in the process — `Booking:BaseUrl` pointed at
+`Lakbay.Booking`'s plain-HTTP port, but gRPC's HTTP/2 negotiation on a
+shared origin needs TLS/ALPN. Full trail:
+[`../Lakbay.Docs/docs/05_DEVLOG.md`](../Lakbay.Docs/docs/05_DEVLOG.md)'s
+2026-09-12 entries, [ADR-0027](../Lakbay.Docs/docs/adr/ADR-0027-agent-channel-confirm-booking-over-grpc.md).
+
+Also verified the same day: `GET /api/agent-offer/{destinationId}` against
+the full real 14-product catalog (post-Cms/Sync pipeline), correctly
+aggregating accommodations/packages/activities from three separate
+`Lakbay.AvailabilityApi` GraphQL collections into one response.
+
 ## Known gaps
 
 - Oracle AI Database Free is not yet installed locally, so
