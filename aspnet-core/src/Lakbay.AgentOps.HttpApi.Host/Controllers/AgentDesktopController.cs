@@ -1,10 +1,10 @@
 using System;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Grpc.Core;
 using Lakbay.AgentOps.AgentOffers;
 using Lakbay.AgentOps.CallLogging;
+using Lakbay.Booking.Api.Grpc;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lakbay.AgentOps.Controllers;
@@ -22,16 +22,16 @@ public class AgentDesktopController : ControllerBase
 {
     private readonly IAgentOfferAppService _agentOfferAppService;
     private readonly ICallLogAppService _callLogAppService;
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly BookingConfirmService.BookingConfirmServiceClient _bookingConfirmClient;
 
     public AgentDesktopController(
         IAgentOfferAppService agentOfferAppService,
         ICallLogAppService callLogAppService,
-        IHttpClientFactory httpClientFactory)
+        BookingConfirmService.BookingConfirmServiceClient bookingConfirmClient)
     {
         _agentOfferAppService = agentOfferAppService;
         _callLogAppService = callLogAppService;
-        _httpClientFactory = httpClientFactory;
+        _bookingConfirmClient = bookingConfirmClient;
     }
 
     [HttpGet("agent-offer/{destinationCode}")]
@@ -75,32 +75,51 @@ public class AgentDesktopController : ControllerBase
         // BFF pattern (ADR-0021): the desktop app never calls Lakbay.Booking directly -
         // AgentOps proxies it, which is also where a failed attempt gets retried
         // (ADR-0025) instead of the agent having to hang up and call back.
-        var bookingClient = _httpClientFactory.CreateClient(nameof(AgentDesktopController));
-
-        using var response = await bookingClient.PostAsJsonAsync(
-            "api/bookings/confirm",
-            new { request.ProductId, request.DateSlot, request.CustomerId, Channel = request.Channel },
-            cancellationToken);
-
-        var result = response.StatusCode switch
+        // ADR-0027: this specific call goes over gRPC, not REST - an agent is
+        // live on the phone and needs an immediate confirm/fail response.
+        var grpcRequest = new ConfirmAgentBookingRequest
         {
-            System.Net.HttpStatusCode.OK => await MapConfirmedAsync(response, cancellationToken),
-            System.Net.HttpStatusCode.Conflict => new AgentDesktopBookingResult
-            {
-                Success = false,
-                Message = await ReadMessageAsync(response, cancellationToken) ?? "This slot is no longer available.",
-            },
-            System.Net.HttpStatusCode.NotImplemented => new AgentDesktopBookingResult
-            {
-                Success = false,
-                Message = await ReadMessageAsync(response, cancellationToken) ?? "Online payment is not available yet.",
-            },
-            _ => new AgentDesktopBookingResult
-            {
-                Success = false,
-                Message = $"Lakbay.Booking returned an unexpected status ({(int)response.StatusCode}).",
-            },
+            ProductId = request.ProductId,
+            DateSlot = request.DateSlot.ToString("yyyy-MM-dd"),
+            CustomerId = request.CustomerId ?? string.Empty,
         };
+
+        AgentDesktopBookingResult result;
+        try
+        {
+            var reply = await _bookingConfirmClient.ConfirmAgentBookingAsync(
+                grpcRequest,
+                cancellationToken: cancellationToken);
+
+            result = reply.Status switch
+            {
+                ConfirmAgentBookingStatus.Confirmed => new AgentDesktopBookingResult
+                {
+                    Success = true,
+                    BookingId = reply.BookingId,
+                    PaymentStatus = reply.PaymentStatus,
+                    Message = reply.Message,
+                },
+                ConfirmAgentBookingStatus.NotAvailable => new AgentDesktopBookingResult
+                {
+                    Success = false,
+                    Message = reply.Message,
+                },
+                _ => new AgentDesktopBookingResult
+                {
+                    Success = false,
+                    Message = $"Lakbay.Booking returned an unexpected gRPC status ({reply.Status}).",
+                },
+            };
+        }
+        catch (RpcException ex)
+        {
+            result = new AgentDesktopBookingResult
+            {
+                Success = false,
+                Message = $"Lakbay.Booking is unreachable over gRPC ({ex.StatusCode}).",
+            };
+        }
 
         await _callLogAppService.CompleteCallAsync(new CompleteCallDto
         {
@@ -114,36 +133,6 @@ public class AgentDesktopController : ControllerBase
         });
 
         return Ok(result);
-    }
-
-    private static async Task<AgentDesktopBookingResult> MapConfirmedAsync(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        var payload = await response.Content.ReadFromJsonAsync<BookingConfirmedPayload>(cancellationToken: cancellationToken);
-        return new AgentDesktopBookingResult
-        {
-            Success = true,
-            BookingId = payload?.BookingId,
-            PaymentStatus = payload?.PaymentStatus,
-            Message = payload?.Message ?? "Booking confirmed.",
-        };
-    }
-
-    private static async Task<string?> ReadMessageAsync(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        var payload = await response.Content.ReadFromJsonAsync<MessagePayload>(cancellationToken: cancellationToken);
-        return payload?.Message;
-    }
-
-    private class BookingConfirmedPayload
-    {
-        public string? BookingId { get; set; }
-        public string? PaymentStatus { get; set; }
-        public string? Message { get; set; }
-    }
-
-    private class MessagePayload
-    {
-        public string? Message { get; set; }
     }
 }
 

@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+option csharp_namespace = "Lakbay.Booking.Api.Grpc";
+
+package bookingconfirm;
+
+// ADR-0027: the Agent Channel's synchronous confirm-booking call.
+// Deliberately narrow — one RPC, hardcoded to Channel=Agent server-side.
+// The online channel keeps using the existing REST endpoint.
+service BookingConfirmService {
+  rpc ConfirmAgentBooking (ConfirmAgentBookingRequest) returns (ConfirmAgentBookingReply);
+}
+
+message ConfirmAgentBookingRequest {
+  string product_id = 1;
+  string date_slot = 2; // ISO 8601 date, e.g. "2026-11-01"
+  string customer_id = 3;
+  string agent_session_id = 4; // Lakbay.AgentOps call/session id, for logging/tracing only
+}
+
+enum ConfirmAgentBookingStatus {
+  CONFIRM_AGENT_BOOKING_STATUS_UNSPECIFIED = 0;
+  CONFIRMED = 1;
+  NOT_AVAILABLE = 2;
+}
+
+message ConfirmAgentBookingReply {
+  ConfirmAgentBookingStatus status = 1;
+  string booking_id = 2; // empty unless status == CONFIRMED
+  string payment_status = 3; // e.g. "PendingInvoice" — empty unless status == CONFIRMED
+  string message = 4;
+}
