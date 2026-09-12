@@ -11,6 +11,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.36.1" />
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.83.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.83.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.25" />
     <PackageReference Include="Hangfire.SqlServer" Version="1.8.25" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
@@ -42,6 +48,14 @@
     <Content Remove="Logs\**" />
     <EmbeddedResource Remove="Logs\**" />
     <None Remove="Logs\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ADR-0027: client-side generated code for the Agent Channel's gRPC
+         confirm-booking call. Copied from Lakbay.Booking.Api's Protos/ —
+         see 04_TASKS.md for the open follow-up on sharing this more
+         formally (a package) if a third consumer ever needs it. -->
+    <Protobuf Include="Protos\bookingconfirm.proto" GrpcServices="Client" />
   </ItemGroup>
 
 </Project>

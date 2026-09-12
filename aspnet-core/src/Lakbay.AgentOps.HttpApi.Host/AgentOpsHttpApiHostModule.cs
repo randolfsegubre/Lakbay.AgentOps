@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Grpc.Net.ClientFactory;
 using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.SqlServer;
@@ -17,6 +18,7 @@ using Lakbay.AgentOps.EntityFrameworkCore;
 using Lakbay.AgentOps.Hubs;
 using Lakbay.AgentOps.MultiTenancy;
 using Lakbay.AgentOps.Oracle;
+using Lakbay.Booking.Api.Grpc;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
@@ -110,12 +112,15 @@ public class AgentOpsHttpApiHostModule : AbpModule
             client.BaseAddress = new Uri(baseUrl);
         });
 
-        // Named client for the BFF proxy in AgentDesktopController (ADR-0021).
-        context.Services.AddHttpClient(nameof(Controllers.AgentDesktopController), client =>
+        // ADR-0027: the BFF proxy in AgentDesktopController (ADR-0021) reaches
+        // Lakbay.Booking's Agent-Channel confirm-booking call over gRPC, not
+        // REST — same "Booking:BaseUrl" origin, Kestrel negotiates HTTP/1.1
+        // vs HTTP/2 over TLS (ALPN), so no separate port is needed.
+        context.Services.AddGrpcClient<BookingConfirmService.BookingConfirmServiceClient>(client =>
         {
             var baseUrl = configuration["Booking:BaseUrl"]
                 ?? throw new InvalidOperationException("Booking:BaseUrl is not configured.");
-            client.BaseAddress = new Uri(baseUrl);
+            client.Address = new Uri(baseUrl);
         });
     }
 
